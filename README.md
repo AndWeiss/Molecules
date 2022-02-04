@@ -11,23 +11,24 @@ Some (physical) properties can be adjusted with the computer keys:
 
 * **case 'D':**   
 more damping in the collisions  
-if the value is above one the velocity of two colliding molecules is higher than its initial velocity 
+if the value is above **1** the velocity of two colliding molecules is higher than its initial velocity which means that energy is created within the collision   
 `damping -= 0.001;`   
 * **case 'S':**    
 less damping in the collisions  
 `damping += 0.001;`  
 * **case  'E':**  
-more "air" drag
+more "air" drag  
 `drag[0] +=  0.005;`  
 `drag[1] +=  0.005;`  
 * **case  'W':**   
-less "air" drag
-`drag[0] -= 0.005;`
+less "air" drag  
+`drag[0] -= 0.005;`  
 `drag[1] -= 0.005;`  
 * **case  'F':**  
 set the ellipses to be filled with greyscale or only the outlines  
 `fillin = !fillin;`  
 * **case  'B':**  
+increase the mean size of the  
 `globalcoresize *=1.1;`  
 `coresize = Mat.multiply(coresize,1.1);`  
 * **case  'V':**  
@@ -35,7 +36,7 @@ set the ellipses to be filled with greyscale or only the outlines
 `coresize = Mat.multiply(coresize,0.9);`    
 * **case  'C':**  
 `sizeSpread +=0.01;`  
-`setCoreSize();`     
+`setCoreSize();`  
 * **case  'X':**  
 `sizeSpread +=-0.01;`  
 `setCoreSize();`    
