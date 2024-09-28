@@ -1,3 +1,5 @@
+import processing.javafx.*; //<>//
+
 import papaya.*;
 import java.util.Date;
 import java.io.File;
@@ -32,11 +34,11 @@ int buffer = 1024;
 
 
 int Ncores =512 ;
-float globalcoresize = 20;
-float sizeSpread = 0.9;
-int Nelectrons = 0;
-int elecSize =1;
-float elecdistance = 2;
+float globalcoresize = 50;
+float sizeSpread = 0.7;
+int Nelectrons = 3;
+int elecSize =5;
+float elecdistance = 1;
 //
 float[][] location = new float[Ncores][2];  // location of shape
 float[][] velocity = new float[Ncores][2];  // velocity of shape
@@ -61,11 +63,13 @@ float[][][] electroncolor = new float[Ncores][Nelectrons][3];  // location of sh
 float[] drag = {0.005,0.005};
 float[] center= new float[2]; 
 float damping = 0.95;
-float magnusfak = 50;
+float magnusfak = 500; // ToDo: try to control magnusfak by the mid frequencies
 float whitefak = 1;
 float linethickness = 1;
 boolean gravflag = false;
 float veloFac = 100;
+
+// S = 1.0009993 bis 1.0069996 , m = 620, e = 2.44, 
 
 float alpha =0;
 float t =0;
@@ -107,7 +111,7 @@ WindowFunction newWindow = FFT.NONE;
 void setup() 
 {
   //size(1600, 800,FX2D); //FX2D P2D
-  fullScreen(FX2D, SPAN);
+  fullScreen(P2D,SPAN); //FX2D
   background(backy);
   center[0] = width/2;
   center[1]=height/2;
@@ -190,66 +194,72 @@ void setup()
 void keyPressed() {
   println(key);
   switch (key) {
-    case 'D': 
+    case 'd': 
       // more damping in the collisions
       damping -= 0.001; 
       println("D = + collision damping");
       println(damping);
       break;
-    case 'S': 
+    case 's': 
       // less damping in the collisions
       damping += 0.001; 
       println("S= - collision damping");
       println(damping);
       break;
-    case 'E':
+    case 'e':
       // more "air" drag
       drag[0] +=  0.005; 
       drag[1] +=  0.005;
       println(drag[0]);
       break;
-    case 'W': 
+    case 'w': 
       // less "air" drag
       drag[0] -= 0.005; 
       drag[1] -= 0.005;
       println(drag[0]);
       break;
-    case 'F':
+    case 'f':
+      // turn on the filling of the ellipses 
       fillin = !fillin;
       println(fillin);
       break;
-    case 'B':
+    case 'b':
+      // increases the mean size of the ellipses
       globalcoresize *=1.1;
       coresize = Mat.multiply(coresize,1.1);
       println(globalcoresize);
       break;
-    case 'V':
+    case 'v':
+      // decreases the mean size of the ellipses
       globalcoresize *=0.9;
       coresize = Mat.multiply(coresize,0.9);
       println(globalcoresize);
       break;
-    case 'C':
+    case 'c':
+      // increases the spread of the size of the ellipses is not working in the moment why?
       sizeSpread +=0.01;
       setCoreSize();
       println(sizeSpread);
       break;
-    case 'X':
+    case 'x':
+      // decreases the spread of the size of the ellipses is not working in the moment why?
       sizeSpread +=-0.01;
       setCoreSize();
       println(sizeSpread);
       break;
-    case 'M':
+    case 'm':
       magnusfak += 10;
       println('M');
       println(magnusfak);
       break;
-    case 'N':
+    case 'n':
       magnusfak += -10;
       println('N');
       println(magnusfak);
       break;
-    case 'G':
+    case 'g':
       gravflag = !gravflag;
+      break;
     case '-':
       linethickness += 0.2;
       println("linethickness:");
@@ -259,18 +269,18 @@ void keyPressed() {
       linethickness -= 0.2;
       linethickness = max(0,linethickness);
       break;
-    case 'P':
+    case 'p':
       whitefak += 0.2;
       println("whitefak");
       println(whitefak);
       break;
-    case 'O':
+    case 'o':
       whitefak -= 0.2;
       break;
-    case 'J':
+    case 'j':
       veloFac +=10;
       break;
-    case 'H':
+    case 'h':
       veloFac -=10;
       break;  
     }
@@ -311,16 +321,16 @@ void draw() {
       //line((n*width/Ncores),0,(n*width/Ncores),height);
       */
       //println("nach sound: ");
-      //println(velocity[n][0]); //<>//
+      //println(velocity[n][0]);
       //println(velocity[n][1]);
       
       // -------------------------------
       
       // check collisions with the wall
-      //wallcollision(n);
+      wallcollision(n);
        
       // symmetry boundaries
-      symmetryBoundary(n);
+      //symmetryBoundary(n);
      
       // check collisions:
       collision(n,gravflag);
@@ -370,10 +380,11 @@ void draw() {
       
       
       //println(gravity[n]);
+      t = (t+0.00001) % TWO_PI;
       for(int i =0;i<Nelectrons;i++){
-        alpha=parseFloat(i)/Nelectrons*PI;
-        electron[n][i][0] = location[n][0] + sin(t) + (coresize[n]+elecdistance);
-        electron[n][i][1] = location[n][1] + cos(t) + (coresize[n]+elecdistance);
+        alpha=parseFloat(i)/Nelectrons*TWO_PI;
+        electron[n][i][0] = location[n][0] + cos(alpha+ t) *(coresize[n]+elecdistance);
+        electron[n][i][1] = location[n][1] + sin(alpha+ t) * (coresize[n]+elecdistance);
         noStroke();
         //R = i*255/Nelectrons;
         //G = 255-i*20; //255-n*255/ebenen; //100;
