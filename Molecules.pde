@@ -1,5 +1,4 @@
 import processing.javafx.*; //<>//
-
 import papaya.*;
 import java.util.Date;
 import java.io.File;
@@ -30,13 +29,13 @@ int backy =0;
 float strokewidth =1; 
 //
 
-int buffer = 1024;
+
 
 
 int Ncores =512 ;
 float globalcoresize = 50;
 float sizeSpread = 0.7;
-int Nelectrons = 3;
+int Nelectrons = 0;
 int elecSize =5;
 float elecdistance = 1;
 //
@@ -54,20 +53,17 @@ float[][] corecolor = new float[Ncores][3];
 float[] coremass = new float[Ncores];
 float[] coresize = new float[Ncores];
 float[] coredensity = new float[Ncores];
-float[] freqValue = new float[5];
-int[] freqboarders = {1,6,12,24,116,buffer}; // must be size(freqValue)+1
-// start frequency of 40 Hz, 200 Hz, 500 Hz, 1000 Hz, 5000 Hz, 5000 Hz and buffer
 
 float[][][] electroncolor = new float[Ncores][Nelectrons][3];  // location of shape
 // parameters for flying behaviour ----------------------- 
 float[] drag = {0.005,0.005};
 float[] center= new float[2]; 
 float damping = 0.95;
-float magnusfak = 500; // ToDo: try to control magnusfak by the mid frequencies
+float magnusfak = 100; // ToDo: try to control magnusfak by the mid frequencies
 float whitefak = 1;
 float linethickness = 1;
 boolean gravflag = false;
-float veloFac = 100;
+float veloFac = 10;
 
 // S = 1.0009993 bis 1.0069996 , m = 620, e = 2.44, 
 
@@ -93,11 +89,10 @@ float sign = 1;
 boolean flag = true;
 int randstart ;
 int Nmoving = 1;
-boolean fillin = false;
+boolean fillin = true;
+float coresizefak;
 
 // variables for the sound processing -----------------------------
-
-
 //soundflowers check out
 Minim minim;
 //AudioPlayer player;
@@ -105,13 +100,25 @@ FFT fft ;
 AudioOutput out;
 AudioInput in;
 WindowFunction newWindow = FFT.NONE;
-
-
+//
+int buffer          = 1024;
+int[] limits        = {1, 6, 12, 24, 116, 512}; // must be size(freqValue)+1
+float[] f_means     = {0. , 0. , 0. , 0. , 0.} ;
+float[] f_means_old = new float[5];
+int[] max_freq      = new int[5];
+float[] f_maxs      = new float[5];
+float f_diff        = 0 ;
+// factors that can be controlled by the keyboard -----------
+float[] factors     = {1. ,1. ,1. ,1. ,1. } ;
+// is assigned when button is pushed
+float superfac      = 1 ; 
+boolean log_on      = false;
 
 void setup() 
 {
-  //size(1600, 800,FX2D); //FX2D P2D
-  fullScreen(P2D,SPAN); //FX2D
+  //size(1600, 800,P2D); //FX2D P2D
+  //fullScreen(P2D,SPAN); //FX2D
+  fullScreen(P2D);
   background(backy);
   center[0] = width/2;
   center[1]=height/2;
@@ -278,43 +285,61 @@ void keyPressed() {
       whitefak -= 0.2;
       break;
     case 'j':
-      veloFac +=10;
+      veloFac +=2;
       break;
     case 'h':
-      veloFac -=10;
+      veloFac -=2;
       break;  
-    }
+     case '2':
+      // overall scaling of all factors +
+      superfac = 1.1;
+      factors = Mat.multiply(factors,superfac);
+      break;
+     case '1':
+      // overall scaling of the factors -
+      superfac = 0.9;
+      factors = Mat.multiply(factors,superfac);
+      break;
+    }    
   }
   
+
   
+float get_signum() {
+  float f = random(-1,1);
+  if      (f > 0) { f =  1; }
+  else if (f < 0) { f = -1; }
+  return f;
+}
+
+
+
 void draw() {
    //background(backy,10);
    fill(0,6);
    noStroke();
    rect(0,0,width,height);
-   // Soud processing 
-   newWindow = FFT.HANN;
-   fft.window( newWindow );
-   fft.forward( in.mix ); //fourier-Transformation
-   //running through all frequencies
-   for(int j =0;j<freqValue.length;j++){
-     freqValue[j] =0;
-     for(int i = freqboarders[j];i<freqboarders[j+1];i++){
-       freqValue[j] += fft.getBand(i);
-     }
-     //freqValue[j]/=freqboarders[j+1];
-   }
+   //get the sound numbers
+   Get_sound_numbers();
+   // loop through all cores
    for(int n =0;n<Ncores;n++){
       // for the Sound processing ------
       // set the size and velocity depending on the frequency spectrum
       //freqValue[0] = pow(log(fft.getBand(n)+1),0.3);
       //freqValue[1] = log(fft.getBand(n+1)+1);
+      coresizefak = min(max(f_maxs[1],0.5),2);
+      println("mean");
+      println(f_means[1]);
+      println("max");
+      println(f_maxs[1]);
       if(n<5){
-        velocity[n][0] = random(-1,1)*freqValue[n]*veloFac;
-        velocity[n][1] = random(-1,1)*freqValue[n]*veloFac;
+        velocity[n][0] = get_signum()*f_means[n]*veloFac;
+        velocity[n][1] = get_signum()*f_means[n]*veloFac;
         //coresize[n] = (freqValue[0]+freqValue[n])*2+globalcoresize;
-        coredensity[n] = (freqValue[0]+freqValue[n])*2000;
+        // coredensity[n] = (f_means[n])*2000;
+        coremass[n]    = coredensity[n]*pow(coresize[n],3)*PI; 
       }
+      
       /*
       stroke(255); 
       line(n*width/Ncores,0,n*width/Ncores,log(fft.getBand(2*n))*height);
@@ -356,7 +381,7 @@ void draw() {
       //println(Mat.norm2(velocity[n]));
       
       
-      ellipse(location[n][0], location[n][1],coresize[n]*2,coresize[n]*2);
+      ellipse(location[n][0], location[n][1],coresize[n]*coresizefak,coresize[n]*coresizefak);
       /*
       noFill();
       box(200);
@@ -403,8 +428,6 @@ void draw() {
         //println(electron[n][i][0],electron[n][i][1],electron[n][i][2]);
       }
       
-     
-      
       velocity[n][0] += (gravity[n][0])/2*dt -drag[0]*velocity[n][0]*dt ;
       velocity[n][1] += (gravity[n][1])/2*dt -drag[1]*velocity[n][1]*dt;
       //
@@ -417,8 +440,6 @@ void draw() {
       //gravity[n][0] = 0;
       //gravity[n][1] = 0;
    }
-   t +=dt;
-    //println(t);
   }
   void mousePressed() {
     noLoop();
