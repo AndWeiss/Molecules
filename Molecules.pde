@@ -52,18 +52,21 @@ float[][][] myPvec = new float[3][Ncores][2];
 float[][] corecolor = new float[Ncores][3];
 float[] coremass = new float[Ncores];
 float[] coresize = new float[Ncores];
+// is the coresize that will be adjusted by the sound numbers in draw
+float[] coresize_var = new float[Ncores];
 float[] coredensity = new float[Ncores];
 
 float[][][] electroncolor = new float[Ncores][Nelectrons][3];  // location of shape
 // parameters for flying behaviour ----------------------- 
 float[] drag = {0.005,0.005};
 float[] center= new float[2]; 
+// damping factor in the collisions
 float damping = 0.95;
 float magnusfak = 100; // ToDo: try to control magnusfak by the mid frequencies
 float whitefak = 1;
 float linethickness = 1;
 boolean gravflag = false;
-float veloFac = 10;
+float veloFac = 50;
 
 // S = 1.0009993 bis 1.0069996 , m = 620, e = 2.44, 
 
@@ -102,14 +105,15 @@ AudioInput in;
 WindowFunction newWindow = FFT.NONE;
 //
 int buffer          = 1024;
-int[] limits        = {1, 6, 12, 24, 116, 512}; // must be size(freqValue)+1
+// the limits for the frequency intervalls
+int[] limits        = {1, 6, 12, 24, 116, 512}; // must be freqValue.length + 1
 float[] f_means     = {0. , 0. , 0. , 0. , 0.} ;
 float[] f_means_old = new float[5];
 int[] max_freq      = new int[5];
 float[] f_maxs      = new float[5];
 float f_diff        = 0 ;
 // factors that can be controlled by the keyboard -----------
-float[] factors     = {1. ,1. ,1. ,1. ,1. } ;
+float[] factors     = {0.5 ,1. ,1. ,10. ,1. }; // Mat.constant(1.0,5);
 // is assigned when button is pushed
 float superfac      = 1 ; 
 boolean log_on      = false;
@@ -149,8 +153,7 @@ void setup()
       */
       //println(templocx, "  ", templocy);
       
-      location[i][0] = random(width); // randomGaussian()+center[0];
-      location[i][1] = random(height); //randomGaussian()+center[1];
+      place_balls();
       //
       velocity[i][0] = 0;
       velocity[i][1] = 0;
@@ -201,68 +204,63 @@ void setup()
 void keyPressed() {
   println(key);
   switch (key) {
-    case 'd': 
-      // more damping in the collisions
-      damping -= 0.001; 
-      println("D = + collision damping");
-      println(damping);
+    case 'x':
+      // low frequency factor +
+     factors[0] += 0.01;
       break;
-    case 's': 
-      // less damping in the collisions
-      damping += 0.001; 
-      println("S= - collision damping");
-      println(damping);
+    case'y':
+     // low frequency factor -
+     factors[0] -= 0.01;
+     break;
+   case 's':
+      // low mids frequency factor +
+      factors[1] += 0.01;
       break;
-    case 'e':
-      // more "air" drag
-      drag[0] +=  0.005; 
-      drag[1] +=  0.005;
-      println(drag[0]);
+    case 'a':
+      // low mids frequency factor -
+      factors[1] -= 0.01;
       break;
-    case 'w': 
-      // less "air" drag
-      drag[0] -= 0.005; 
-      drag[1] -= 0.005;
-      println(drag[0]);
+    case 'w':
+      // mids frequency factor +
+      factors[2] += 0.01;
+      break;
+    case 'q':
+      // mids frequency factor -
+      factors[2] -= 0.01;
+      break;
+    case 'd':
+      // high mids frequency factor +
+      factors[3] += 0.01;
       break;
     case 'f':
+      // high mids frequency factor -
+      factors[3] -= 0.01;
+      break;
+    case 'e':
+      // high frequency factor +
+      factors[4] += 0.01;
+      break;
+    case 'r':
+      // high frequency factor -
+      factors[4] -= 0.01;
+      break;
+    case 'ö':
       // turn on the filling of the ellipses 
       fillin = !fillin;
       println(fillin);
       break;
-    case 'b':
-      // increases the mean size of the ellipses
-      globalcoresize *=1.1;
-      coresize = Mat.multiply(coresize,1.1);
-      println(globalcoresize);
-      break;
-    case 'v':
-      // decreases the mean size of the ellipses
-      globalcoresize *=0.9;
-      coresize = Mat.multiply(coresize,0.9);
-      println(globalcoresize);
-      break;
-    case 'c':
+    
+    case 't':
       // increases the spread of the size of the ellipses is not working in the moment why?
       sizeSpread +=0.01;
       setCoreSize();
       println(sizeSpread);
       break;
-    case 'x':
+    case 'z':
       // decreases the spread of the size of the ellipses is not working in the moment why?
       sizeSpread +=-0.01;
       setCoreSize();
       println(sizeSpread);
-      break;
-    case 'm':
-      magnusfak += 10;
-      println('M');
-      println(magnusfak);
-      break;
-    case 'n':
-      magnusfak += -10;
-      println('N');
-      println(magnusfak);
       break;
     case 'g':
       gravflag = !gravflag;
@@ -284,10 +282,10 @@ void keyPressed() {
     case 'o':
       whitefak -= 0.2;
       break;
-    case 'j':
+    case 'v':
       veloFac +=2;
       break;
-    case 'h':
+    case 'c':
       veloFac -=2;
       break;  
      case '2':
@@ -300,16 +298,18 @@ void keyPressed() {
       superfac = 0.9;
       factors = Mat.multiply(factors,superfac);
       break;
+     case ' ':
+       // get the spheres back in the display area
+       place_balls();
     }    
   }
   
 
   
-float get_signum() {
-  float f = random(-1,1);
-  if      (f > 0) { f =  1; }
-  else if (f < 0) { f = -1; }
-  return f;
+float[] get_direction() {
+  // returns a normalized vector in a random direction
+  float[] dir = {random(-1,1), random(-1,1)};
+  return Mat.divide(dir, Mat.norm2(dir)) ;
 }
 
 
@@ -321,46 +321,35 @@ void draw() {
    rect(0,0,width,height);
    //get the sound numbers
    Get_sound_numbers();
+   println("f_means");
+   println(f_means);
+   println("f_maxs");
+   println(f_maxs); 
+   // assign the sound numbers to the physical parameters  
+   magnusfak = f_means[3];
+   damping  = min(max(0.5,f_means[2]),1.2);
+   drag[0]  = 0.2 - f_means[0];
+   drag[1]  = 0.2 - f_maxs[0];
+   coresizefak = min(max(f_maxs[1],0.5),2);
+   for (int n = 0; n <5; n++){
+     float[] dir = get_direction();
+     velocity[n][0] = dir[0]*f_means[n]*veloFac;
+     velocity[n][1] = dir[1]*f_means[n]*veloFac;
+     
+   }
+   
    // loop through all cores
    for(int n =0;n<Ncores;n++){
-      // for the Sound processing ------
-      // set the size and velocity depending on the frequency spectrum
-      //freqValue[0] = pow(log(fft.getBand(n)+1),0.3);
-      //freqValue[1] = log(fft.getBand(n+1)+1);
-      coresizefak = min(max(f_maxs[1],0.5),2);
-      println("mean");
-      println(f_means[1]);
-      println("max");
-      println(f_maxs[1]);
-      if(n<5){
-        velocity[n][0] = get_signum()*f_means[n]*veloFac;
-        velocity[n][1] = get_signum()*f_means[n]*veloFac;
-        //coresize[n] = (freqValue[0]+freqValue[n])*2+globalcoresize;
-        // coredensity[n] = (f_means[n])*2000;
-        coremass[n]    = coredensity[n]*pow(coresize[n],3)*PI; 
-      }
-      
-      /*
-      stroke(255); 
-      line(n*width/Ncores,0,n*width/Ncores,log(fft.getBand(2*n))*height);
-      //line((n*width/Ncores),0,(n*width/Ncores),height);
-      */
-      //println("nach sound: ");
-      //println(velocity[n][0]);
-      //println(velocity[n][1]);
-      
-      // -------------------------------
-      
+      coresize_var[n] = coresize[n]*coresizefak;
+      coremass[n] = coredensity[n]*pow(coresize_var[n],3)*PI; 
+
+      // --------------------------------
       // check collisions with the wall
       wallcollision(n);
-       
       // symmetry boundaries
       //symmetryBoundary(n);
-     
-      // check collisions:
+      // check collisions of the spheres to each other
       collision(n,gravflag);
-      
-           
       //*/
       //println(location[2]);
       
@@ -381,7 +370,7 @@ void draw() {
       //println(Mat.norm2(velocity[n]));
       
       
-      ellipse(location[n][0], location[n][1],coresize[n]*coresizefak,coresize[n]*coresizefak);
+      ellipse(location[n][0], location[n][1],coresize_var[n],coresize_var[n]);
       /*
       noFill();
       box(200);
@@ -408,8 +397,8 @@ void draw() {
       t = (t+0.00001) % TWO_PI;
       for(int i =0;i<Nelectrons;i++){
         alpha=parseFloat(i)/Nelectrons*TWO_PI;
-        electron[n][i][0] = location[n][0] + cos(alpha+ t) *(coresize[n]+elecdistance);
-        electron[n][i][1] = location[n][1] + sin(alpha+ t) * (coresize[n]+elecdistance);
+        electron[n][i][0] = location[n][0] + cos(alpha+ t) * (coresize_var[n] +elecdistance);
+        electron[n][i][1] = location[n][1] + sin(alpha+ t) * (coresize_var[n]+elecdistance);
         noStroke();
         //R = i*255/Nelectrons;
         //G = 255-i*20; //255-n*255/ebenen; //100;

@@ -5,7 +5,7 @@ void collision(int startindex,boolean gravon){
   float[] distanceunit= new float[3];
   //float[] distanceunitabs;
   float[] startvelo=velocity[startindex];
-  float r1 =coresize[startindex];
+  float r1 =coresize_var[startindex];
   float[] velodiff = new float[3];
   float dissub = 0;
   float r2;
@@ -20,7 +20,7 @@ void collision(int startindex,boolean gravon){
     distance = Mat.subtract(location[startindex],location[i]);
     absdistance = max(Mat.norm2(distance),0.000001);
     distanceunit = Mat.divide(distance,absdistance);
-    r2 = coresize[i];
+    r2 = coresize_var[i];
     m2 = coremass[i];
     if (absdistance < (r1+r2)){
       /*for (int j=0;j<3;j++){
