@@ -7,55 +7,117 @@ Additionally the papaya library, for matrix multiplication must be installed htt
 also the minim library is mandatory.
 
 The Molecules move towards a direction that is calculated by the collision of the molecules to each other. 
-Some (physical) properties can be adjusted with the computer keys:
 
-* **case 'D':**   
-more damping in the collisions  
-if the value is above **1** the velocity of two colliding molecules is higher than its initial velocity which means that energy is created within the collision   
-`damping -= 0.001;`   
-* **case 'S':**    
-less damping in the collisions  
-`damping += 0.001;`  
-* **case  'E':**  
-more "air" drag  
-`drag[0] +=  0.005;`  
-`drag[1] +=  0.005;`  
-* **case  'W':**   
-less "air" drag  
-`drag[0] -= 0.005;`  
-`drag[1] -= 0.005;`  
-* **case  'F':**  
-set the ellipses to be filled with greyscale or only the outlines  
-`fillin = !fillin;`  
-* **case  'B':**  
-increase the mean size of the  
-`globalcoresize *=1.1;`  
-`coresize = Mat.multiply(coresize,1.1);`  
-* **case  'V':**  
-`globalcoresize *=0.9;`  
-`coresize = Mat.multiply(coresize,0.9);`    
-* **case  'C':**  
-`sizeSpread +=0.01;`  
-`setCoreSize();`  
-* **case  'X':**  
-`sizeSpread +=-0.01;`  
-`setCoreSize();`    
-* **case  'M':**  
-`magnusfak += 10;`    
-* **case  'N':**  
-`magnusfak += -10;`    
-* **case  'G':**  
-`gravflag = !gravflag;`  
-* **case  '-':**  
-`linethickness += 0.2;`     
-* **case  '.':**  
-`linethickness -= 0.2;`  
-`linethickness = max(0,linethickness);`   
-* **case  'P':**  
-`whitefak += 0.2;`     
-* **case  'O':**  
-`whitefak -= 0.2;`   
-* **case  'J':**  
-`veloFac +=10;`    
-* **case  'H':**  
-`veloFac -=10;`  
+Some (physical) parameters change with the sound input. 
+
+The sound input transformed to a fourier space, which is separated into five intervalls. 
+Get_sound_numbers will calculate the mean (f_means) and the maximum (f_maxs) values of the magnitude in these intervalls. 
+Addidinaly it calculates the magnitude difference to the timely earlyer mean value, and the stereo intensity by comparing left and right audio input.
+The calculated sound number are scaled with factors (factors), which can be adjusted with the keyboard.
+
+
+* **case 'x':**
+      // low frequency factor +
+     factors[0] += 0.01;
+      break;
+* **case'y':**
+     // low frequency factor -
+     factors[0] -= 0.01;
+     break;
+* **case 's':**
+      // low mids frequency factor +
+      factors[1] += 0.01;
+      break;
+* **case 'a':**
+      // low mids frequency factor -
+      factors[1] -= 0.01;
+      break;
+* **case 'w':**
+      // mids frequency factor +
+      factors[2] += 0.01;
+      break;
+* **case 'q':**
+      // mids frequency factor -
+      factors[2] -= 0.01;
+      break;
+* **case 'd':**
+      // high mids frequency factor +
+      factors[3] += 0.01;
+      break;
+    * **case 'f':**
+      // high mids frequency factor -
+      factors[3] -= 0.01;
+      break;
+    * **case 'e':**
+      // high frequency factor +
+      factors[4] += 0.01;
+      break;
+    * **case 'r':**
+      // high frequency factor -
+      factors[4] -= 0.01;
+      break;
+    * **case 'ö':**
+      // turn on the filling of the ellipses 
+      fillin = !fillin;
+      println(fillin);
+      break;
+    
+    * **case 't':**
+      // increases the spread of the size of the ellipses is not working in the moment why?
+      sizeSpread +=0.01;
+      setCoreSize();
+      println(sizeSpread);
+      break;
+    * **case 'z':**
+      // decreases the spread of the size of the ellipses is not working in the moment why?
+      sizeSpread +=-0.01;
+      setCoreSize();
+      println(sizeSpread);
+      break;
+    * **case 'g':**
+      gravflag = !gravflag;
+      break;
+    * **case '-':**
+      linethickness += 0.2;
+      println("linethickness:**");
+      println(linethickness);
+      break;
+    * **case '.':**
+      linethickness -= 0.2;
+      linethickness = max(0,linethickness);
+      break;
+    * **case 'p':**
+      whitefak += 0.2;
+      println("whitefak");
+      println(whitefak);
+      break;
+    * **case 'o':**
+      whitefak -= 0.2;
+      break;
+    * **case 'v':**
+      veloFac +=2;
+      break;
+    * **case 'c':**
+      veloFac -=2;
+      break;  
+     * **case '2':**
+      // overall scaling of all factors +
+      superfac = 1.1;
+      factors = Mat.multiply(factors,superfac);
+      break;
+     * **case '1':**
+      // overall scaling of the factors -
+      superfac = 0.9;
+      factors = Mat.multiply(factors,superfac);
+      break;
+     * **case ' ':**
+       // get the spheres back in the display area
+       place_balls();
+     break;
+     * **case 'l':** 
+       // turns on / off the logarithmic evaluation of the fft
+       log_on = !log_on;
+       break;
+
+
+

@@ -66,7 +66,7 @@ float magnusfak = 100; // ToDo: try to control magnusfak by the mid frequencies
 float whitefak = 1;
 float linethickness = 1;
 boolean gravflag = false;
-float veloFac = 50;
+float veloFac = 0;
 
 // S = 1.0009993 bis 1.0069996 , m = 620, e = 2.44, 
 
@@ -101,7 +101,7 @@ Minim minim;
 //AudioPlayer player;
 FFT fft ;
 AudioOutput out;
-AudioInput in;
+AudioInput line_in;
 WindowFunction newWindow = FFT.NONE;
 //
 int buffer          = 1024;
@@ -111,12 +111,20 @@ float[] f_means     = {0. , 0. , 0. , 0. , 0.} ;
 float[] f_means_old = new float[5];
 int[] max_freq      = new int[5];
 float[] f_maxs      = new float[5];
+// the difference of the before and actuell sound value (dynamic change) 
 float f_diff        = 0 ;
+// the difference between left and right sound input
+float stereo        = 0;
 // factors that can be controlled by the keyboard -----------
-float[] factors     = {0.5 ,1. ,1. ,10. ,1. }; // Mat.constant(1.0,5);
+// they are multiplied to the sound numbers and control the physical parameters
+//     0: , 1: size , 2: damping, 3: magnusfak, 4: drag 
+float[] factors     = {0.5 ,1. ,0.04 ,10. ,0.05 }; // Mat.constant(1.0,5);
 // is assigned when button is pushed
 float superfac      = 1 ; 
-boolean log_on      = false;
+boolean log_on      = true;
+
+int mywidth = 1920;
+int myheight = 1080;
 
 void setup() 
 {
@@ -124,17 +132,18 @@ void setup()
   //fullScreen(P2D,SPAN); //FX2D
   fullScreen(P2D);
   background(backy);
-  center[0] = width/2;
-  center[1]=height/2;
+
+  center[0] = mywidth/2;
+  center[1]=  myheight/2;
   
   // for the Sound processing ------
   
   // we pass this to Minim so that it can load files from the data directory
   minim = new Minim(this);                                               
   // construct a LiveInput by giving it an InputStream from minim.                                                  
-  in = minim.getLineIn(); //new LiveInput( inputStream );
-  fft = new FFT( buffer, in.sampleRate() );
-  println(in.sampleRate()); 
+  line_in = minim.getLineIn(); //new LiveInput( inputStream );
+  fft = new FFT( buffer, line_in.sampleRate() );
+  println(line_in.sampleRate()); 
   // -------------------------------
   
 
@@ -301,14 +310,26 @@ void keyPressed() {
      case ' ':
        // get the spheres back in the display area
        place_balls();
-    }    
-  }
+     break;
+     case 'l': 
+       // turns on / off the logarithmic evaluation of the fft
+       log_on = !log_on;
+       break;
+    }
+    println("factors");
+    println(factors);
+    print("log is ");
+    println(log_on);
+}
   
 
   
 float[] get_direction() {
   // returns a normalized vector in a random direction
   float[] dir = {random(-1,1), random(-1,1)};
+  if (abs(stereo) > 1) { dir[0] = stereo; }
+  //else{ dir[0] = random(-1,1); }
+  // return the normalized direction vector
   return Mat.divide(dir, Mat.norm2(dir)) ;
 }
 
@@ -318,23 +339,31 @@ void draw() {
    //background(backy,10);
    fill(0,6);
    noStroke();
-   rect(0,0,width,height);
+   rect(0,0,mywidth,myheight);
    //get the sound numbers
    Get_sound_numbers();
-   println("f_means");
-   println(f_means);
-   println("f_maxs");
-   println(f_maxs); 
+
    // assign the sound numbers to the physical parameters  
    magnusfak = f_means[3];
-   damping  = min(max(0.5,f_means[2]),1.2);
-   drag[0]  = 0.2 - f_means[0];
-   drag[1]  = 0.2 - f_maxs[0];
+   damping  = min(0.9 + f_maxs[2],1.1);
+   drag[0]  = 0.1 - f_means[4]/(1+ f_maxs[4]);
+   drag[1]  = 0.1 - f_means[4]/(1+ f_maxs[4]);
    coresizefak = min(max(f_maxs[1],0.5),2);
+   println("physical parameters");
+   print("damping: ");
+   println(damping);
+   print("drag: ");
+   println(drag);
+   print("magnusfak: ");
+   println(magnusfak);
+   print("stereo: ");
+   println(stereo);
    for (int n = 0; n <5; n++){
      float[] dir = get_direction();
-     velocity[n][0] = dir[0]*f_means[n]*veloFac;
-     velocity[n][1] = dir[1]*f_means[n]*veloFac;
+     //velocity[n][0] = dir[0]*f_means[n]*veloFac;
+     //velocity[n][1] = dir[1]*f_means[n]*veloFac;
+     velocity[n][0] += dir[0]*f_diff*veloFac;
+     velocity[n][1] += dir[1]*f_diff*veloFac;
      
    }
    
