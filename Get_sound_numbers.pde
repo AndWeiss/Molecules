@@ -1,6 +1,12 @@
 //---------------------------
+// global variables
+float mean_left  = 0;
+float mean_right = 0;
+//----------------------------
 void Get_sound_numbers(){
   //----------------------------
+   mean_left  = 0;
+   mean_right = 0;
    newWindow = FFT.HANN;
    fft.window( newWindow );
    fft.forward( line_in.mix ); //fourier-Transformation
@@ -11,13 +17,13 @@ void Get_sound_numbers(){
      f_maxs[i]      = 0;
      max_freq[i]    = 1;
    }
-   stereo = 0;  
    //----------------------------------------------------------------
    // loop through all frequency bandwidth
    for (int n =0; n<limits.length-1; n++){
      Get_means(n,limits[n],limits[n+1]);
    }
    f_diff = Mat.sum(f_means_old) - Mat.sum(f_means);
+   stereo = mean_right - mean_left;
    //println(f_means);
    //println(f_maxs);
 }
@@ -25,7 +31,8 @@ void Get_sound_numbers(){
 void Get_means(int index,int l0, int l1){
     for(int i=l0; i<l1 ;i++){
       float tempmag = fft.getBand(i);
-      stereo += abs(line_in.left.get(i)) - abs(line_in.right.get(i));
+      mean_left  += abs(line_in.left.get(i)) ;
+      mean_right += abs(line_in.right.get(i));
       if (log_on){
          tempmag = log(tempmag+1);
       }

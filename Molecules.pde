@@ -5,7 +5,7 @@ import java.io.File;
 
 import ddf.minim.analysis.*;
 import ddf.minim.*;
-import ddf.minim.ugens.*;
+import ddf.minim.ugens.*;  
 import ddf.minim.spi.*; // for AudioStream
 import processing.pdf.*; //for pdf export
 
@@ -118,9 +118,10 @@ float stereo        = 0;
 // factors that can be controlled by the keyboard -----------
 // they are multiplied to the sound numbers and control the physical parameters
 //     0: , 1: size , 2: damping, 3: magnusfak, 4: drag 
-float[] factors     = {0.5 ,1. ,0.04 ,10. ,0.05 }; // Mat.constant(1.0,5);
-// is assigned when button is pushed
-float superfac      = 1 ; 
+float[] factors     = {0.5 ,0.5 ,0.04 ,20. ,0.02 }; // Mat.constant(1.0,5);
+float stereo_fac    = 10;
+// scaling of all factors by multiplication of the superfac or (2-supberfac)
+float superfac      = 0.9 ; 
 boolean log_on      = true;
 
 int mywidth = 1920;
@@ -258,19 +259,19 @@ void keyPressed() {
       fillin = !fillin;
       println(fillin);
       break;
-    
-    case 't':
-      // increases the spread of the size of the ellipses is not working in the moment why?
+    case 'z':
+      // increase the spread of the size of the ellipses 
       sizeSpread +=0.01;
       setCoreSize();
       println(sizeSpread);
       break;
-    case 'z':
-      // decreases the spread of the size of the ellipses is not working in the moment why?
+    case 't':
+      // decrease the spread of the size of the ellipses 
       sizeSpread +=-0.01;
       setCoreSize();
       println(sizeSpread);
       break;
+
     case 'g':
       gravflag = !gravflag;
       break;
@@ -298,13 +299,11 @@ void keyPressed() {
       veloFac -=2;
       break;  
      case '2':
-      // overall scaling of all factors +
-      superfac = 1.1;
-      factors = Mat.multiply(factors,superfac);
+      // overall scaling of all factors higherll
+      factors = Mat.multiply(factors,2-superfac);
       break;
      case '1':
-      // overall scaling of the factors -
-      superfac = 0.9;
+      // overall scaling of the factors lower
       factors = Mat.multiply(factors,superfac);
       break;
      case ' ':
@@ -314,6 +313,14 @@ void keyPressed() {
      case 'l': 
        // turns on / off the logarithmic evaluation of the fft
        log_on = !log_on;
+       break;
+    case 'm': 
+       // increase the stereo factor +
+       stereo_fac +=1;
+       break;
+    case 'n': 
+       // increase the stereo factor +
+       stereo_fac -=1;
        break;
     }
     println("factors");
@@ -327,7 +334,7 @@ void keyPressed() {
 float[] get_direction() {
   // returns a normalized vector in a random direction
   float[] dir = {random(-1,1), random(-1,1)};
-  if (abs(stereo) > 1) { dir[0] = stereo; }
+  //if (abs(stereo) > 1) { dir[0] = stereo; }
   //else{ dir[0] = random(-1,1); }
   // return the normalized direction vector
   return Mat.divide(dir, Mat.norm2(dir)) ;
@@ -446,7 +453,7 @@ void draw() {
         //println(electron[n][i][0],electron[n][i][1],electron[n][i][2]);
       }
       
-      velocity[n][0] += (gravity[n][0])/2*dt -drag[0]*velocity[n][0]*dt ;
+      velocity[n][0] += (gravity[n][0] + stereo*stereo_fac)/2*dt -drag[0]*velocity[n][0]*dt ;
       velocity[n][1] += (gravity[n][1])/2*dt -drag[1]*velocity[n][1]*dt;
       //
       location[n][0] +=  velocity[n][0]*dt;
