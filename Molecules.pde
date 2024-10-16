@@ -32,9 +32,9 @@ float strokewidth =1;
 
 
 
-int Ncores =512 ;
+int Ncores = 2000; //512 ;
 float globalcoresize = 50;
-float sizeSpread = 0.7;
+float sizeSpread = 0.8;
 int Nelectrons = 0;
 int elecSize =5;
 float elecdistance = 1;
@@ -62,17 +62,17 @@ float[] drag = {0.005,0.005};
 float[] center= new float[2]; 
 // damping factor in the collisions
 float damping = 0.95;
-float magnusfak = 100; // ToDo: try to control magnusfak by the mid frequencies
-float whitefak = 1;
+float magnusfak = 100; 
+float white_fac = 0.1;
 float linethickness = 1;
 boolean gravflag = false;
-float veloFac = 0;
+float veloFac = 10;
 
 // S = 1.0009993 bis 1.0069996 , m = 620, e = 2.44, 
 
-float alpha =0;
-float t =0;
-float dt = 0.01;
+float alpha = 0;
+float t     = 0;
+float dt    = 0.01;
 float velocityElec = 1;
 // corners geometry ------------------------------
 float[] corner_rub = new float[3];
@@ -88,13 +88,13 @@ float[] corner_llf = new float[3];
 // helping variables -----------------------------
 int connection = 0;
 float R, G, B;
-float sign = 1;
-boolean flag = true;
+float sign     = 1;
+boolean flag   = true;
 int randstart ;
-int Nmoving = 1;
+int Nmoving    = 1;
 boolean fillin = true;
-float coresizefak;
-
+float coresizefak_x, coresizefak_y;
+boolean big_bang = false;
 // variables for the sound processing -----------------------------
 //soundflowers check out
 Minim minim;
@@ -117,23 +117,26 @@ float f_diff        = 0 ;
 float stereo        = 0;
 // factors that can be controlled by the keyboard -----------
 // they are multiplied to the sound numbers and control the physical parameters
-//     0: , 1: size , 2: damping, 3: magnusfak, 4: drag 
-float[] factors     = {0.5 ,0.5 ,0.04 ,20. ,0.02 }; // Mat.constant(1.0,5);
+//     0: size_x , 1: size_y , 2: damping, 3: magnusfak, 4: drag 
+float[] factors     = {0.006 ,0.01 ,0.015 ,30. ,0.004 }; // Mat.constant(1.0,5);
 float stereo_fac    = 10;
 // scaling of all factors by multiplication of the superfac or (2-supberfac)
 float superfac      = 0.9 ; 
-boolean log_on      = true;
+boolean log_on      = false;
 
 int mywidth = 1920;
 int myheight = 1080;
+// direction will be specified later
+float[] dir = {0,0};
 
 void setup() 
 {
   //size(1600, 800,P2D); //FX2D P2D
   //fullScreen(P2D,SPAN); //FX2D
-  fullScreen(P2D);
+  fullScreen(P2D,SPAN);
   background(backy);
-
+  // set the color mode and max values to 100
+  colorMode(HSB,100);
   center[0] = mywidth/2;
   center[1]=  myheight/2;
   
@@ -216,43 +219,43 @@ void keyPressed() {
   switch (key) {
     case 'x':
       // low frequency factor +
-     factors[0] += 0.01;
+     factors[0] *= 1.1;
       break;
     case'y':
      // low frequency factor -
-     factors[0] -= 0.01;
+     factors[0] *= 0.9;
      break;
    case 's':
       // low mids frequency factor +
-      factors[1] += 0.01;
+      factors[1] *= 1.1;
       break;
     case 'a':
       // low mids frequency factor -
-      factors[1] -= 0.01;
+      factors[1] *= 0.9;
       break;
     case 'w':
       // mids frequency factor +
-      factors[2] += 0.01;
+      factors[2] *= 1.1;
       break;
     case 'q':
       // mids frequency factor -
-      factors[2] -= 0.01;
+      factors[2] *= 0.9;
       break;
     case 'd':
       // high mids frequency factor +
-      factors[3] += 0.01;
+      factors[3] *= 1.1;
       break;
     case 'f':
       // high mids frequency factor -
-      factors[3] -= 0.01;
+      factors[3] *= 0.9;
       break;
     case 'e':
       // high frequency factor +
-      factors[4] += 0.01;
+      factors[4] *= 1.1;
       break;
     case 'r':
       // high frequency factor -
-      factors[4] -= 0.01;
+      factors[4] *= 0.9;
       break;
     case 'ö':
       // turn on the filling of the ellipses 
@@ -261,13 +264,13 @@ void keyPressed() {
       break;
     case 'z':
       // increase the spread of the size of the ellipses 
-      sizeSpread +=0.01;
+      sizeSpread *= 1.1;
       setCoreSize();
       println(sizeSpread);
       break;
     case 't':
       // decrease the spread of the size of the ellipses 
-      sizeSpread +=-0.01;
+      sizeSpread *= 0.9;
       setCoreSize();
       println(sizeSpread);
       break;
@@ -285,12 +288,12 @@ void keyPressed() {
       linethickness = max(0,linethickness);
       break;
     case 'p':
-      whitefak += 0.2;
-      println("whitefak");
-      println(whitefak);
+      white_fac *= 1.1;
+      println("white_fac");
+      println(white_fac);
       break;
     case 'o':
-      whitefak -= 0.2;
+      white_fac *= 0.9;
       break;
     case 'v':
       veloFac +=2;
@@ -316,13 +319,15 @@ void keyPressed() {
        break;
     case 'm': 
        // increase the stereo factor +
-       stereo_fac +=1;
+       stereo_fac *= 1.1;
        break;
     case 'n': 
        // increase the stereo factor +
-       stereo_fac -=1;
+       stereo_fac *= 0.9;
        break;
-    }
+    case ENTER:
+      big_bang = !big_bang;
+    } // end switch 
     println("factors");
     println(factors);
     print("log is ");
@@ -355,135 +360,124 @@ void draw() {
    damping  = min(0.9 + f_maxs[2],1.1);
    drag[0]  = 0.1 - f_means[4]/(1+ f_maxs[4]);
    drag[1]  = 0.1 - f_means[4]/(1+ f_maxs[4]);
-   coresizefak = min(max(f_maxs[1],0.5),2);
-   println("physical parameters");
-   print("damping: ");
-   println(damping);
-   print("drag: ");
-   println(drag);
-   print("magnusfak: ");
-   println(magnusfak);
-   print("stereo: ");
-   println(stereo);
-   for (int n = 0; n <5; n++){
-     float[] dir = get_direction();
-     //velocity[n][0] = dir[0]*f_means[n]*veloFac;
-     //velocity[n][1] = dir[1]*f_means[n]*veloFac;
-     velocity[n][0] += dir[0]*f_diff*veloFac;
-     velocity[n][1] += dir[1]*f_diff*veloFac;
-     
-   }
+   coresizefak_x = min(0.5 + f_means[0],2);
+   coresizefak_y = min(0.5 + f_means[1],2);
+   //println("physical parameters");
+   //print("damping: ");
+   //println(damping);
+   //print("drag: ");
+   //println(drag);
+   //print("magnusfak: ");
+   //println(magnusfak);
+   //print("stereo: ");
+   //println(stereo);
    
-   // loop through all cores
-   for(int n =0;n<Ncores;n++){
-      coresize_var[n] = coresize[n]*coresizefak;
-      coremass[n] = coredensity[n]*pow(coresize_var[n],3)*PI; 
 
-      // --------------------------------
-      // check collisions with the wall
-      wallcollision(n);
-      // symmetry boundaries
-      //symmetryBoundary(n);
-      // check collisions of the spheres to each other
-      collision(n,gravflag);
-      //*/
-      //println(location[2]);
-      
-      // Display the Molecules at the location vector
-      
-      //stroke(255);
-      //strokeWeight(1); //strichbreite
-      if(fillin){
-        fill(Mat.norm2(velocity[n])*whitefak);
-        noStroke();
-      }
-      else{
-        noFill();
-        strokeWeight(linethickness);
-        stroke(Mat.norm2(velocity[n])*whitefak);
-      }
-      //println("Norm: ");
-      //println(Mat.norm2(velocity[n]));
-      
-      
-      ellipse(location[n][0], location[n][1],coresize_var[n],coresize_var[n]);
-      /*
-      noFill();
-      box(200);
-      */
-      //println("Cernel:------------------------");
-      //println(location[0],location[1],location[2]);
-      //println("Electrons:------------------------");
-      //
-      /*
-      stroke(150);
-      //connection = floor(random(Ncores));
-      //line(location[n][0],location[n][1],location[n][2],location[connection][0],location[connection][1],location[connection][2]);
-      
-      if (n==(Ncores-1)){
-        line(location[n][0],location[n][1],location[n][2],location[0][0],location[0][1],location[0][2]);
-      }
-      else{
-        line(location[n][0],location[n][1],location[n][2],location[n+1][0],location[n+1][1],location[n+1][2]);
-      }
-      */
-      
-      
-      //println(gravity[n]);
-      t = (t+0.00001) % TWO_PI;
-      for(int i =0;i<Nelectrons;i++){
-        alpha=parseFloat(i)/Nelectrons*TWO_PI;
-        electron[n][i][0] = location[n][0] + cos(alpha+ t) * (coresize_var[n] +elecdistance);
-        electron[n][i][1] = location[n][1] + sin(alpha+ t) * (coresize_var[n]+elecdistance);
-        noStroke();
-        //R = i*255/Nelectrons;
-        //G = 255-i*20; //255-n*255/ebenen; //100;
-        //B = 255- i*255/Nelectrons;
-        fill(electroncolor[n][i][0],electroncolor[n][i][1],electroncolor[n][i][2]);
-        //fill(255);
-        ellipse(electron[n][i][0],electron[n][i][1],elecSize,elecSize);
-        
-        //translate(500,250, 0);
-        //ellipse(500,250,10,10);
-        //stroke(R,G,B);
-        //strokeWeight(1);
-        //line(electron[n][i][0],electron[n][i][1],electron[n][i][2],location[n][0],location[n][1],location[n][2]);
-        
-        
-        //println(electron[n][i][0],electron[n][i][1],electron[n][i][2]);
-      }
-      
-      velocity[n][0] += (gravity[n][0] + stereo*stereo_fac)/2*dt -drag[0]*velocity[n][0]*dt ;
-      velocity[n][1] += (gravity[n][1])/2*dt -drag[1]*velocity[n][1]*dt;
-      //
-      location[n][0] +=  velocity[n][0]*dt;
-      location[n][1] +=  velocity[n][1]*dt;
-      
-      gravity[n][0] *= pow(dt,0.1) ;
-      gravity[n][1] *= pow(dt,0.1) ;
-      
-      //gravity[n][0] = 0;
-      //gravity[n][1] = 0;
-   }
-  }
+   //if (big_bang) {
+   //  // what happened after the big bang
+   //  for (int n = 0; n <5; n++){
+   //        dir = get_direction();
+   //        //velocity[n][0] = dir[0]*f_means[n]*veloFac;
+   //        //velocity[n][1] = dir[1]*f_means[n]*veloFac;
+   //        no_boundary(n);
+   //        float[] temploc = {location[n][0] - center[0] ,location[n][1] - center[1]};
+   //        float tempsize = 1 + Mat.norm2(temploc)/10;
+   //        //println("tempsize");
+   //        //println(tempsize);
+   //        //fill(min(50 + velocity[n][0]*white_fac,80),abs(velocity[n][1])*white_fac,Mat.norm2(velocity[n])*white_fac);
+   //        noStroke();
+   //        ellipse(location[n][0] , location[n][1], tempsize,tempsize);
+   //        if (tempsize == 1){
+   //          velocity[n][0] += dir[0]*200;
+   //          velocity[n][1] += dir[1]*200;
+   //        }
+   //        //else{
+   //        //  velocity[n][0] += (gravity[n][0] + stereo*stereo_fac)/2*dt -drag[0]*velocity[n][0]*dt ;
+   //        //  velocity[n][1] += (gravity[n][1])/2*dt -drag[1]*velocity[n][1]*dt;
+   //        //}
+   //        //
+   //        location[n][0] +=  velocity[n][0]*dt*10;
+   //        location[n][1] +=  velocity[n][1]*dt*10;
+           
+   //        fill(0,0,100);
+
+   //    }
+   //}
+   //else{
+       for (int n = 0; n <3; n++){
+           dir = get_direction();
+           //velocity[n][0] = dir[0]*f_means[n]*veloFac;
+           //velocity[n][1] = dir[1]*f_means[n]*veloFac;
+           velocity[n][0] += dir[0]*f_diff*veloFac;
+           velocity[n][1] += dir[1]*f_diff*veloFac;
+       }
+     // loop through all cores
+       for(int n =0;n<Ncores;n++){
+          coresize_var[n] = coresize[n]*(coresizefak_x + coresizefak_y)/2;
+          coremass[n] = coredensity[n]*pow(coresize_var[n],3)*PI; 
+    
+          // --------------------------------
+          // check collisions with the wall
+          wallcollision(n);
+          // symmetry boundaries
+          //symmetryBoundary(n);
+          // check collisions of the spheres to each other
+          collision(n,gravflag);
+          //*/
+          //println(location[2]);
+          
+          // Display the Molecules at the location vector
+          
+          //stroke(255);
+          //strokeWeight(1); //strichbreite
+          // set the color of the ellipses according to the velocities
+          if(fillin){
+            //only white
+            // fill(Mat.norm2(velocity[n])*white_fac);
+            fill(min(50 + velocity[n][0]*white_fac,80),abs(velocity[n][1])*white_fac,Mat.norm2(velocity[n])*white_fac);
+            noStroke();
+          }
+          else{
+            noFill();
+            strokeWeight(linethickness);
+            stroke(Mat.norm2(velocity[n])*white_fac);
+          }        
+          
+          ellipse(location[n][0], location[n][1],coresize[n]*coresizefak_x ,coresize[n]*coresizefak_y);
+         
+          //println(gravity[n]);
+          //t = (t+0.00001) % TWO_PI;
+          //for(int i =0;i<Nelectrons;i++){
+          //  alpha=parseFloat(i)/Nelectrons*TWO_PI;
+          //  electron[n][i][0] = location[n][0] + cos(alpha+ t) * (coresize_var[n] +elecdistance);
+          //  electron[n][i][1] = location[n][1] + sin(alpha+ t) * (coresize_var[n]+elecdistance);
+          //  noStroke();
+          //  //R = i*255/Nelectrons;
+          //  //G = 255-i*20; //255-n*255/ebenen; //100;
+          //  //B = 255- i*255/Nelectrons;
+          //  fill(electroncolor[n][i][0],electroncolor[n][i][1],electroncolor[n][i][2]);
+          //  //fill(255);
+          //  ellipse(electron[n][i][0],electron[n][i][1],elecSize,elecSize);
+          //}
+          
+          velocity[n][0] += (gravity[n][0] + stereo*stereo_fac)/2*dt -drag[0]*velocity[n][0]*dt ;
+          velocity[n][1] += (gravity[n][1])/2*dt -drag[1]*velocity[n][1]*dt;
+          //
+          location[n][0] +=  velocity[n][0]*dt;
+          location[n][1] +=  velocity[n][1]*dt;
+          
+          gravity[n][0] *= pow(dt,0.1) ;
+          gravity[n][1] *= pow(dt,0.1) ;
+          
+          //gravity[n][0] = 0;
+          //gravity[n][1] = 0;
+       } // end loop through all cores
+  //}
+} // end draw ------------------------------------------------------------------
+
   void mousePressed() {
     noLoop();
   }
   void mouseReleased() {
     loop();
   }
-/*
-class HLine { 
-  float ypos, velocity; 
-  HLine (float y, float s) {  
-    ypos = y; 
-    velocity = s; 
-  } 
-  void update() { 
-    ypos += velocity; 
-    if (ypos > height) { 
-      ypos = 0; 
-    } 
-    line(0, ypos, width, ypos); 
-  } 
-} */
