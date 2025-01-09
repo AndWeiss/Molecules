@@ -1,6 +1,8 @@
 # Molecules
 
-It calculates the movement of particles (realized as ellipses), based on an audio input. 
+It calculates the movement of particles (realized as ellipses), based on audio input. 
+
+An demonstration can be found in: [youtube](https://youtu.be/1QCAsis7KT4?si=4RnAl_ZnFG1IfmiL)
 
 It is programmed with processing version 3+ https://processing.org/download/
 Additionally the papaya library, for matrix multiplication must be installed http://adilapapaya.com/papayastatistics/

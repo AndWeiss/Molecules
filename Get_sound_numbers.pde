@@ -23,7 +23,7 @@ void Get_sound_numbers(){
      Get_means(n,limits[n],limits[n+1]);
    }
    f_diff = Mat.sum(f_means_old) - Mat.sum(f_means);
-   stereo = stereo_fac*(mean_left - mean_right);
+   stereo = stereo_fac*(mean_right - mean_left);
    //println(f_means);
    //println(f_maxs);
 }
